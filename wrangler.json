@@ -1,0 +1,16 @@
+{
+	"compatibility_date": "2025-10-08",
+	"main": "src/index.ts",
+	"name": "worker-leaderboards",
+	"upload_source_maps": true,
+	"d1_databases": [
+		{
+			"binding": "DB",
+			"database_id": "973049c2-4024-4da9-a440-567534f79c83",
+			"database_name": "socola-leaderboards"
+		}
+	],
+	"observability": {
+		"enabled": true
+	}
+}
