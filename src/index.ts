@@ -1,7 +1,8 @@
 import { renderHtml } from "./renderHtml";
 
+// TODO: will need logic to generate the correct Access-Control-Allow-Origin domain based on the incoming request. For now, just using words.socolagames.com.
 const CORS_HEADERS = {
-	'Access-Control-Allow-Origin': 'https://socolagames.com',
+	'Access-Control-Allow-Origin': 'https://words.socolagames.com',
 	'Access-Control-Allow-Methods': 'GET, POST, OPTIONS',
 	'Access-Control-Allow-Headers': 'Content-Type',
 };
