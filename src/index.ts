@@ -1,8 +1,19 @@
 import { renderHtml } from "./renderHtml";
 
+const CORS_HEADERS = {
+	'Access-Control-Allow-Origin': 'https://socolagames.com',
+	'Access-Control-Allow-Methods': 'GET, POST, OPTIONS',
+	'Access-Control-Allow-Headers': 'Content-Type',
+};
+
 export default {
 	async fetch(request, env) {
 		const url = new URL(request.url);
+
+		// OPTIONS preflight
+		if (request.method === 'OPTIONS') {
+			return new Response(null, { status: 204, headers: CORS_HEADERS });
+		}
 
 		// GET /leaderboard
 		if (request.method === 'GET' && url.pathname === '/leaderboard') {
@@ -13,9 +24,8 @@ export default {
 				WHERE game_id = ?
 				ORDER BY score DESC LIMIT 10`
 			).bind(gameId).all();
-			return Response.json(results);
+			return Response.json(results, { headers: CORS_HEADERS });
 		}
-
 
 		// POST /score { game_id, player_name, player_id, score, game_hash }
 		if (request.method === 'POST' && url.pathname === '/score') {
@@ -25,15 +35,15 @@ export default {
 				`SELECT id FROM games WHERE id = ?`
 			).bind(game_id).first();
 
-			if (!game) return new Response('Not found', { status: 404 });
+			if (!game) return new Response('Not found', { status: 404, headers: CORS_HEADERS });
 
 			await env.DB.prepare(
 				`INSERT INTO scores (game_id, player_name, player_id, player_score, game_hash)
 				VALUES (?, ?. ?, ?, ?)`
 			).bind(game_id, player_name, player_id, player_score, game_hash).run();
-			return Response.json({ ok: true });
+			return Response.json({ ok: true }, { headers: CORS_HEADERS });
 		}
 
-		return new Response('Not found', { status: 404 });
+		return new Response('Not found', { status: 404, headers: CORS_HEADERS });
 	},
 } satisfies ExportedHandler<Env>;
