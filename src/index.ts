@@ -20,7 +20,7 @@ export default {
 		if (request.method === 'GET' && url.pathname === '/leaderboard') {
 			const gameId = url.searchParams.get('game');
 			const { results } = await env.DB.prepare(
-				`SELECT player_name, player_score, timestamp
+				`SELECT player_name, player_score, created_at
 				FROM scores
 				WHERE game_id = ?
 				ORDER BY score DESC LIMIT 10`
@@ -40,7 +40,7 @@ export default {
 
 			const timestamp = new Date().toISOString();
 		await env.DB.prepare(
-				`INSERT INTO scores (game_id, player_name, player_id, player_score, game_hash, timestamp)
+				`INSERT INTO scores (game_id, player_name, player_id, player_score, game_hash, created_at)
 				VALUES (?, ?, ?, ?, ?, ?)`
 			).bind(game_id, player_name, player_id, player_score, game_hash, timestamp).run();
 			return Response.json({ ok: true }, { headers: CORS_HEADERS });
