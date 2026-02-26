@@ -42,7 +42,7 @@ export default {
 		await env.DB.prepare(
 				`INSERT INTO scores (game_id, player_name, player_id, player_score, game_hash, created_at)
 				VALUES (?, ?, ?, ?, ?, ?)`
-			).bind(game_id, player_name, player_id, player_score, game_hash, timestamp).run();
+			).bind(game_id, player_name, player_id, player_score, game_hash ?? null, timestamp).run();
 			return Response.json({ ok: true }, { headers: CORS_HEADERS });
 		}
 
