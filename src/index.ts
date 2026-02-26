@@ -23,7 +23,7 @@ export default {
 				`SELECT player_name, player_score, created_at
 				FROM scores
 				WHERE game_id = ?
-				ORDER BY score DESC LIMIT 10`
+				ORDER BY player_score DESC LIMIT 10`
 			).bind(gameId).all();
 			return Response.json(results, { headers: CORS_HEADERS });
 		}
