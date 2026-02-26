@@ -33,7 +33,7 @@ export default {
 			const { game_id, player_name, player_id, player_score, game_hash } = await request.json();
 
 			const game = await env.DB.prepare(
-				`SELECT id FROM games WHERE id = ?`
+				`SELECT id FROM games WHERE game_id = ?`
 			).bind(game_id).first();
 
 			if (!game) return new Response('Not found', { status: 404, headers: CORS_HEADERS });
