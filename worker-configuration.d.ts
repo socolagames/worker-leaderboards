@@ -7,6 +7,8 @@ declare namespace Cloudflare {
 	}
 	interface Env {
 		DB: D1Database;
+		TURNSTILE_SECRET: string;
+		SESSION_HMAC_SECRET: string;
 	}
 }
 interface Env extends Cloudflare.Env {}
