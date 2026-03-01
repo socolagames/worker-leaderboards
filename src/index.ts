@@ -71,6 +71,7 @@ export default {
 				return new Response('Bad Request', { status: 400, headers: CORS_HEADERS });
 			}
 			const tw = Math.floor(Date.now() / 180000); // 180-second windows
+			console.log('hm: ' + env.SESSION_HMAC_SECRET);
 			const token = await hmacSign(env.SESSION_HMAC_SECRET, `${game_id}:${player_id}:${tw}`);
 			return Response.json({ token }, { headers: CORS_HEADERS });
 		}
