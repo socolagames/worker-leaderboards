@@ -3,6 +3,7 @@
 	"main": "src/index.ts",
 	"name": "worker-leaderboards",
 	"upload_source_maps": true,
+	"keep_vars": true,
 	"d1_databases": [
 		{
 			"binding": "DB",
