@@ -141,12 +141,7 @@ export default {
 			const timestamp = new Date().toISOString();
 			await env.DB.prepare(
 				`INSERT INTO scores (game_id, player_name, player_id, player_score, week_id, created_at)
-				VALUES (?, ?, ?, ?, ?, ?)
-				ON CONFLICT(game_id, player_id, week_id)
-				DO UPDATE SET
-					player_score = MAX(player_score, excluded.player_score),
-					player_name  = excluded.player_name,
-					created_at   = excluded.created_at`,
+				VALUES (?, ?, ?, ?, ?, ?)`,
 			)
 				.bind(game_id, player_name.trim(), player_id.trim(), player_score, weekId, timestamp)
 				.run();
