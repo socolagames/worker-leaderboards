@@ -58,20 +58,60 @@ export default {
 			return new Response(null, { status: 204, headers: CORS_HEADERS });
 		}
 
-		// GET /leaderboard?game=<game_id>
+		// GET /leaderboard?game=<game_id>[&player_id=<id>&score=<n>]
 		if (request.method === 'GET' && url.pathname === '/leaderboard') {
 			const gameId = url.searchParams.get('game');
+			const playerId = url.searchParams.get('player_id');
+			const scoreParam = url.searchParams.get('score');
 			const weekId = getCurrentWeekId();
 			const hoursUntilReset = Math.ceil(((weekId + 7 * 24 * 3600) * 1000 - Date.now()) / 3_600_000);
+
+			type ScoreRow = { player_name: string; player_score: number };
+
+			if (playerId && scoreParam !== null) {
+				const playerScore = Number(scoreParam);
+				const [top10Res, aboveRes, playerRes, belowRes] = await env.DB.batch([
+					env.DB.prepare(
+						`SELECT player_name, player_score FROM scores
+						WHERE game_id = ? AND week_id = ?
+						ORDER BY player_score DESC LIMIT 10`,
+					).bind(gameId, weekId),
+					env.DB.prepare(
+						`SELECT player_name, player_score FROM scores
+						WHERE game_id = ? AND week_id = ? AND player_score > ?
+						ORDER BY player_score ASC LIMIT 2`,
+					).bind(gameId, weekId, playerScore),
+					env.DB.prepare(
+						`SELECT player_name, player_score FROM scores
+						WHERE game_id = ? AND week_id = ? AND player_id = ?`,
+					).bind(gameId, weekId, playerId),
+					env.DB.prepare(
+						`SELECT player_name, player_score FROM scores
+						WHERE game_id = ? AND week_id = ? AND player_score < ?
+						ORDER BY player_score DESC LIMIT 2`,
+					).bind(gameId, weekId, playerScore),
+				]);
+
+				const scores = top10Res.results as ScoreRow[];
+				const inTop10 = scores.length < 10 || playerScore > scores[9].player_score;
+
+				let neighbors: ScoreRow[] | null = null;
+				if (!inTop10) {
+					const above = (aboveRes.results as ScoreRow[]).reverse(); // ASC → reverse for DESC display
+					const playerRow = playerRes.results as ScoreRow[];
+					const below = belowRes.results as ScoreRow[];
+					neighbors = [...above, ...playerRow, ...below];
+				}
+
+				return Response.json({ scores, neighbors, hoursUntilReset }, { headers: CORS_HEADERS });
+			}
+
 			const { results } = await env.DB.prepare(
-				`SELECT player_name, player_score
-				FROM scores
+				`SELECT player_name, player_score FROM scores
 				WHERE game_id = ? AND week_id = ?
 				ORDER BY player_score DESC LIMIT 10`,
-			)
-				.bind(gameId, weekId)
-				.all();
-			return Response.json({ scores: results, hoursUntilReset }, { headers: CORS_HEADERS });
+			).bind(gameId, weekId).all();
+			return Response.json({ scores: results, neighbors: null, hoursUntilReset }, { headers: CORS_HEADERS });
 		}
 
 		// GET /session?game_id=<id>&player_id=<id>
