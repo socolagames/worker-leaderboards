@@ -1,3 +1,13 @@
+// ── Week ID (Unix timestamp of most recent Friday 00:00 UTC) ──────────────────
+function getCurrentWeekId(): number {
+	const now = new Date();
+	const daysSinceFriday = (now.getUTCDay() + 2) % 7; // Fri=0 Sat=1 Sun=2 … Thu=6
+	const friday = new Date(now);
+	friday.setUTCDate(now.getUTCDate() - daysSinceFriday);
+	friday.setUTCHours(0, 0, 0, 0);
+	return Math.floor(friday.getTime() / 1000);
+}
+
 // ── CORS ──────────────────────────────────────────────────────────────────────
 const CORS_HEADERS = {
 	'Access-Control-Allow-Origin': 'https://words.socolagames.com',
@@ -51,15 +61,17 @@ export default {
 		// GET /leaderboard?game=<game_id>
 		if (request.method === 'GET' && url.pathname === '/leaderboard') {
 			const gameId = url.searchParams.get('game');
+			const weekId = getCurrentWeekId();
+			const hoursUntilReset = Math.ceil(((weekId + 7 * 24 * 3600) * 1000 - Date.now()) / 3_600_000);
 			const { results } = await env.DB.prepare(
-				`SELECT player_name, player_score, created_at
+				`SELECT player_name, player_score
 				FROM scores
-				WHERE game_id = ?
+				WHERE game_id = ? AND week_id = ?
 				ORDER BY player_score DESC LIMIT 10`,
 			)
-				.bind(gameId)
+				.bind(gameId, weekId)
 				.all();
-			return Response.json(results, { headers: CORS_HEADERS });
+			return Response.json({ scores: results, hoursUntilReset }, { headers: CORS_HEADERS });
 		}
 
 		// GET /session?game_id=<id>&player_id=<id>
@@ -124,13 +136,19 @@ export default {
 				return new Response('Not found', { status: 404, headers: CORS_HEADERS });
 			}
 
-			// 5. Insert score
+			// 5. Upsert score — keep best score per player per week
+			const weekId = getCurrentWeekId();
 			const timestamp = new Date().toISOString();
 			await env.DB.prepare(
-				`INSERT INTO scores (game_id, player_name, player_id, player_score, created_at)
-				VALUES (?, ?, ?, ?, ?)`,
+				`INSERT INTO scores (game_id, player_name, player_id, player_score, week_id, created_at)
+				VALUES (?, ?, ?, ?, ?, ?)
+				ON CONFLICT(game_id, player_id, week_id)
+				DO UPDATE SET
+					player_score = MAX(player_score, excluded.player_score),
+					player_name  = excluded.player_name,
+					created_at   = excluded.created_at`,
 			)
-				.bind(game_id, player_name.trim(), player_id.trim(), player_score, timestamp)
+				.bind(game_id, player_name.trim(), player_id.trim(), player_score, weekId, timestamp)
 				.run();
 
 			return Response.json({ ok: true }, { headers: CORS_HEADERS });
