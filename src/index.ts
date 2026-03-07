@@ -67,9 +67,13 @@ export default {
 			const hoursUntilReset = Math.ceil(((weekId + 7 * 24 * 3600) * 1000 - Date.now()) / 3_600_000);
 
 			type ScoreRow = { player_name: string; player_score: number };
+			type NeighborRow = { player_name: string; player_score: number; rank: number };
 
 			if (playerId && scoreParam !== null) {
 				const playerScore = Number(scoreParam);
+				const rankSubquery = `(SELECT COUNT(*) + 1 FROM scores s2
+					WHERE s2.game_id = s1.game_id AND s2.week_id = s1.week_id
+					AND s2.player_score > s1.player_score) AS rank`;
 				const [top10Res, aboveRes, playerRes, belowRes] = await env.DB.batch([
 					env.DB.prepare(
 						`SELECT player_name, player_score FROM scores
@@ -77,29 +81,32 @@ export default {
 						ORDER BY player_score DESC LIMIT 10`,
 					).bind(gameId, weekId),
 					env.DB.prepare(
-						`SELECT player_name, player_score FROM scores
-						WHERE game_id = ? AND week_id = ? AND player_score > ?
-						ORDER BY player_score ASC LIMIT 2`,
+						`SELECT s1.player_name, s1.player_score, ${rankSubquery}
+						FROM scores s1
+						WHERE s1.game_id = ? AND s1.week_id = ? AND s1.player_score > ?
+						ORDER BY s1.player_score ASC LIMIT 2`,
 					).bind(gameId, weekId, playerScore),
 					env.DB.prepare(
-						`SELECT player_name, player_score FROM scores
-						WHERE game_id = ? AND week_id = ? AND player_id = ?`,
+						`SELECT s1.player_name, s1.player_score, ${rankSubquery}
+						FROM scores s1
+						WHERE s1.game_id = ? AND s1.week_id = ? AND s1.player_id = ?`,
 					).bind(gameId, weekId, playerId),
 					env.DB.prepare(
-						`SELECT player_name, player_score FROM scores
-						WHERE game_id = ? AND week_id = ? AND player_score < ?
-						ORDER BY player_score DESC LIMIT 2`,
+						`SELECT s1.player_name, s1.player_score, ${rankSubquery}
+						FROM scores s1
+						WHERE s1.game_id = ? AND s1.week_id = ? AND s1.player_score < ?
+						ORDER BY s1.player_score DESC LIMIT 2`,
 					).bind(gameId, weekId, playerScore),
 				]);
 
 				const scores = top10Res.results as ScoreRow[];
 				const inTop10 = scores.length < 10 || playerScore > scores[9].player_score;
 
-				let neighbors: ScoreRow[] | null = null;
+				let neighbors: NeighborRow[] | null = null;
 				if (!inTop10) {
-					const above = (aboveRes.results as ScoreRow[]).reverse(); // ASC → reverse for DESC display
-					const playerRow = playerRes.results as ScoreRow[];
-					const below = belowRes.results as ScoreRow[];
+					const above = (aboveRes.results as NeighborRow[]).reverse(); // ASC → reverse for DESC display
+					const playerRow = playerRes.results as NeighborRow[];
+					const below = belowRes.results as NeighborRow[];
 					neighbors = [...above, ...playerRow, ...below];
 				}
 
@@ -123,7 +130,7 @@ export default {
 				return new Response('Bad Request', { status: 400, headers: CORS_HEADERS });
 			}
 			const tw = Math.floor(Date.now() / 180000); // 180-second windows
-			
+
 			const token = await hmacSign(env.SESSION_HMAC_SECRET, `${game_id}:${player_id}:${tw}`);
 			return Response.json({ token }, { headers: CORS_HEADERS });
 		}
