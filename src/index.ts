@@ -89,8 +89,8 @@ export default {
 					env.DB.prepare(
 						`SELECT s1.player_name, s1.player_score, ${rankSubquery}
 						FROM scores s1
-						WHERE s1.game_id = ? AND s1.week_id = ? AND s1.player_id = ?`,
-					).bind(gameId, weekId, playerId),
+						WHERE s1.game_id = ? AND s1.week_id = ? AND s1.player_id = ? AND s1.player_score = ?`,
+					).bind(gameId, weekId, playerId, playerScore),
 					env.DB.prepare(
 						`SELECT s1.player_name, s1.player_score, ${rankSubquery}
 						FROM scores s1
