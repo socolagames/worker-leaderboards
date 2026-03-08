@@ -1,3 +1,5 @@
+import { containsProfanity } from './profanity';
+
 // ── Week ID (Unix timestamp of most recent Friday 00:00 UTC) ──────────────────
 function getCurrentWeekId(): number {
 	const now = new Date();
@@ -160,7 +162,12 @@ export default {
 				return new Response('Bad Request', { status: 400, headers: CORS_HEADERS });
 			}
 
-			// 2. Session token — accept current and previous 180-second window
+			// 2. Profanity check on player name
+			if (containsProfanity(player_name)) {
+				return new Response('Inappropriate name', { status: 422, headers: CORS_HEADERS });
+			}
+
+			// 3. Session token — accept current and previous 180-second window
 			const tw = Math.floor(Date.now() / 180000);
 			const sessionValid =
 				await hmacVerify(env.SESSION_HMAC_SECRET, `${game_id}:${player_id}:${tw}`, session_token) ||
@@ -169,14 +176,14 @@ export default {
 				return new Response('Unauthorized', { status: 401, headers: CORS_HEADERS });
 			}
 
-			// 3. Turnstile — proves a real browser submitted this
+			// 4. Turnstile — proves a real browser submitted this
 			const ip = request.headers.get('CF-Connecting-IP') ?? '';
 			const turnstileValid = await verifyTurnstile(env.TURNSTILE_SECRET, turnstile_token, ip);
 			if (!turnstileValid) {
 				return new Response('Unauthorized', { status: 401, headers: CORS_HEADERS });
 			}
 
-			// 4. Confirm game exists
+			// 5. Confirm game exists
 			const game = await env.DB.prepare(`SELECT game_id FROM games WHERE game_id = ?`)
 				.bind(game_id)
 				.first();
@@ -184,7 +191,7 @@ export default {
 				return new Response('Not found', { status: 404, headers: CORS_HEADERS });
 			}
 
-			// 5. Upsert score — keep best score per player per week
+			// 6. Upsert score — keep best score per player per week
 			const weekId = getCurrentWeekId();
 			const timestamp = new Date().toISOString();
 			await env.DB.prepare(
