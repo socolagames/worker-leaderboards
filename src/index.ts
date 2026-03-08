@@ -65,6 +65,7 @@ export default {
 		if (request.method === 'GET' && url.pathname === '/leaderboard') {
 			const gameId = url.searchParams.get('game');
 			const playerId = url.searchParams.get('player_id');
+			const playerName = url.searchParams.get('player_name');
 			const scoreParam = url.searchParams.get('score');
 			const weekId = getCurrentWeekId();
 			const hoursUntilReset = Math.ceil(((weekId + 7 * 24 * 3600) * 1000 - Date.now()) / 3_600_000);
@@ -92,8 +93,8 @@ export default {
 					env.DB.prepare(
 						`SELECT s1.player_name, s1.player_score, ${rankSubquery}
 						FROM scores s1
-						WHERE s1.game_id = ? AND s1.week_id = ? AND s1.player_id = ? AND s1.player_score = ? LIMIT 1`,
-					).bind(gameId, weekId, playerId, playerScore),
+						WHERE s1.game_id = ? AND s1.week_id = ? AND s1.player_id = ? AND s1.player_score = ? AND s1.player_name = ? LIMIT 1`,
+					).bind(gameId, weekId, playerId, playerScore, playerName),
 					env.DB.prepare(
 						`SELECT s1.player_name, s1.player_score, ${rankSubquery}
 						FROM scores s1
