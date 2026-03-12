@@ -1,14 +1,5 @@
 import { containsProfanity } from './profanity';
-
-// ── Week ID (Unix timestamp of most recent Friday 00:00 UTC) ──────────────────
-function getCurrentWeekId(): number {
-	const now = new Date();
-	const daysSinceFriday = (now.getUTCDay() + 2) % 7; // Fri=0 Sat=1 Sun=2 … Thu=6
-	const friday = new Date(now);
-	friday.setUTCDate(now.getUTCDate() - daysSinceFriday);
-	friday.setUTCHours(0, 0, 0, 0);
-	return Math.floor(friday.getTime() / 1000);
-}
+import { getCurrentWeekId, hmacSign, hmacVerify } from './utils';
 
 // ── CORS ──────────────────────────────────────────────────────────────────────
 const CORS_HEADERS = {
@@ -17,26 +8,6 @@ const CORS_HEADERS = {
 	'Access-Control-Allow-Headers': 'Content-Type',
 	'Content-Security-Policy': "default-src 'self'; script-src 'self' https://challenges.cloudflare.com;",
 };
-
-// ── HMAC helpers (Web Crypto API) ─────────────────────────────────────────────
-async function hmacSign(secret: string, message: string): Promise<string> {
-	const key = await crypto.subtle.importKey(
-		'raw',
-		new TextEncoder().encode(secret),
-		{ name: 'HMAC', hash: 'SHA-256' },
-		false,
-		['sign'],
-	);
-	const sig = await crypto.subtle.sign('HMAC', key, new TextEncoder().encode(message));
-	return btoa(String.fromCharCode(...new Uint8Array(sig)))
-		.replace(/\+/g, '-')
-		.replace(/\//g, '_')
-		.replace(/=/g, '');
-}
-
-async function hmacVerify(secret: string, message: string, token: string): Promise<boolean> {
-	return (await hmacSign(secret, message)) === token;
-}
 
 // ── Turnstile verification ────────────────────────────────────────────────────
 async function verifyTurnstile(secret: string, token: string, ip: string): Promise<boolean> {

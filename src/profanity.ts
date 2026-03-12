@@ -47,6 +47,7 @@ const BLOCKLIST: string[] = [
 	'dyke',
 	'trany',                          // normalised "tranny"
 	// Sexual profanity
+	'fuck',
 	'fuk',                            // normalised "fuck" (fuuuck → fuk)
 	'cunt',
 	'kok',                            // normalised "cock"
